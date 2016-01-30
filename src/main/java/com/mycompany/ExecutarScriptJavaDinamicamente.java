@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
+import java.sql.Connection;
 import java.util.Arrays;
 import java.util.Locale;
 import javax.tools.Diagnostic;
@@ -43,20 +44,29 @@ public class ExecutarScriptJavaDinamicamente {
         //int parameter
         Class[] paramInt = new Class[1];
         paramInt[0] = Integer.TYPE;
-        
+
+        //int parameter
+        Class[] paramConnection = new Class[1];
+        paramConnection[0] = Connection.class;
+
         String nomeDoScriptJavaExterno = "ScriptJavaTeste";
 
         try {
-                
+
             compilarScriptJava(Arrays.asList(obterScriptJava(nomeDoScriptJavaExterno)));
 
             Class cls = obterClasseJava(nomeDoScriptJavaExterno);
 
             Object obj = cls.newInstance();
 
+            Connection con = new ConexaoMySQL().get();
+
             //call the printIt method
-            Method method = cls.getDeclaredMethod("printIt", noparams);
-            method.invoke(obj, null);
+            Method method = cls.getDeclaredMethod("printIt", paramConnection);
+            method.invoke(obj, con);
+            if (con != null) {
+                con.close();
+            }
 
             //call the printItString method, pass a String param 
             method = cls.getDeclaredMethod("printItString", paramString);
@@ -117,16 +127,15 @@ public class ExecutarScriptJavaDinamicamente {
             System.out.println("Script Compilado");
         }
     }
-    
-     public static class MyDiagnosticListener implements DiagnosticListener<JavaFileObject>
-    {
-        public void report(Diagnostic<? extends JavaFileObject> diagnostic)
-        {
- 
+
+    public static class MyDiagnosticListener implements DiagnosticListener<JavaFileObject> {
+
+        public void report(Diagnostic<? extends JavaFileObject> diagnostic) {
+
             System.out.println("Line Number->" + diagnostic.getLineNumber());
             System.out.println("code->" + diagnostic.getCode());
             System.out.println("Message->"
-                               + diagnostic.getMessage(Locale.ENGLISH));
+                    + diagnostic.getMessage(Locale.ENGLISH));
             System.out.println("Source->" + diagnostic.getSource());
             System.out.println(" ");
         }
@@ -134,7 +143,7 @@ public class ExecutarScriptJavaDinamicamente {
 
     private static JavaFileObject obterScriptJava(String className) throws IOException {
 
-        String contents = new String(Files.readAllBytes(new File(diretorioDosScriptsJava, className+".java").toPath()));
+        String contents = new String(Files.readAllBytes(new File(diretorioDosScriptsJava, className + ".java").toPath()));
 
         JavaFileObject so = null;
         try {
@@ -144,21 +153,19 @@ public class ExecutarScriptJavaDinamicamente {
         }
         return so;
     }
-    
-    public static class InMemoryJavaFileObject extends SimpleJavaFileObject
-    {
+
+    public static class InMemoryJavaFileObject extends SimpleJavaFileObject {
+
         private String contents = null;
- 
-        public InMemoryJavaFileObject(String className, String contents) throws Exception
-        {
+
+        public InMemoryJavaFileObject(String className, String contents) throws Exception {
             super(URI.create("string:///" + className.replace('.', '/')
-                             + JavaFileObject.Kind.SOURCE.extension), JavaFileObject.Kind.SOURCE);
+                    + JavaFileObject.Kind.SOURCE.extension), JavaFileObject.Kind.SOURCE);
             this.contents = contents;
         }
- 
+
         public CharSequence getCharContent(boolean ignoreEncodingErrors)
-                throws IOException
-        {
+                throws IOException {
             return contents;
         }
     }
